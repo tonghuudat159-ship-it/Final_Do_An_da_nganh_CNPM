@@ -1,0 +1,60 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: smart-home-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - smart-home-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    image: node:22-alpine
+    container_name: smart-home-backend
+    restart: unless-stopped
+    working_dir: /app
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      PORT: 5000
+      NODE_ENV: development
+      MONGODB_URI: mongodb://mongo:27017/smart-home
+      JWT_SECRET: change_this_jwt_secret_please_make_it_at_least_32_chars
+      JWT_EXPIRES_IN: 7d
+      DEVICE_SECRET_KEY: my_esp32_secret_123
+      CLIENT_URL: http://localhost:5173
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./smart-home-system-main/backend:/app
+      - backend-node-modules:/app/node_modules
+    command: sh -c "npm install && npm run dev"
+
+  frontend:
+    image: node:22-alpine
+    container_name: smart-home-frontend
+    restart: unless-stopped
+    working_dir: /app
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE_URL: http://localhost:5000/api
+      VITE_USE_MOCK_DATA: "false"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./smart-home-system-main:/app
+      - frontend-node-modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+volumes:
+  smart-home-mongo-data:
+  backend-node-modules:
+  frontend-node-modules:
