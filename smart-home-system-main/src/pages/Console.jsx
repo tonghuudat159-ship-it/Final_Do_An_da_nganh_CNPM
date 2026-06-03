@@ -81,7 +81,6 @@ const button = {
 const subtleButton = { ...button, background: "#eef4fb", color: "#174269", border: "1px solid #cfe0f3" };
 const dangerButton = { ...button, background: "#b42318" };
 const disabledButton = { ...subtleButton, opacity: 0.55, cursor: "not-allowed" };
-const helperText = { color: "#52657d", fontSize: 13, lineHeight: 1.5 };
 const table = { width: "100%", borderCollapse: "collapse", minWidth: 760 };
 const th = { textAlign: "left", padding: "10px 12px", background: "#edf3fa", color: "#24364f" };
 const td = { padding: "10px 12px", borderTop: "1px solid #e3e9f2", verticalAlign: "top" };
@@ -208,14 +207,6 @@ function Console() {
   });
 
   const selectedHome = homes.find((home) => getId(home) === homeId);
-  const selectedDeviceId = forms.ruleDeviceId || forms.scheduleDeviceId || getId(devices[0]) || "";
-  const selectedScheduleDevice = devices.find((device) => getId(device) === (forms.scheduleDeviceId || selectedDeviceId));
-  const selectedRuleDevice = devices.find((device) => getId(device) === (forms.ruleDeviceId || selectedDeviceId));
-  const describeCommand = (device, action) => {
-    if (!device) return "Select a device to preview the ESP32 command.";
-    const externalDeviceId = getSensorDeviceId(device) || "esp32-01";
-    return `This will create command ${device.type}/${action} for ${externalDeviceId}.`;
-  };
   const canUseAdmin = (profile = user) => profile?.role === "admin" || profile?.username === "admin";
   const isAdmin = canUseAdmin();
   const currentHomeDevices = devices.filter((device) => getId(device.homeId) === homeId || !device.homeId);
@@ -344,10 +335,12 @@ function Console() {
 
   useEffect(() => {
     refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     loadHomeScope(homeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeId]);
 
   const totals = useMemo(
@@ -415,40 +408,6 @@ function Console() {
       action
     });
   };
-
-  const createSchedule = () =>
-    run(async () => {
-      await schedulesApi.create({
-        name: forms.scheduleName,
-        action: forms.scheduleAction,
-        startDay: forms.startDay,
-        endDay: forms.endDay,
-        startTime: forms.startTime,
-        endTime: forms.endTime,
-        scheduledDays: forms.scheduledDays.split(",").map((day) => Number(day.trim())).filter(Number.isFinite),
-        deviceIds: [forms.scheduleDeviceId].filter(Boolean)
-      });
-      updateForm("scheduleName", "");
-      await loadHomeScope(homeId);
-    }, "Schedule created");
-
-  const createRule = () =>
-    run(async () => {
-      await thresholdApi.create({
-        deviceId: forms.ruleDeviceId,
-        name: forms.ruleName,
-        ruleType: forms.ruleType,
-        dataType: forms.dataType,
-        thresholdValue: Number(forms.thresholdValue),
-        thresholdUnit: forms.thresholdUnit,
-        alertValue: Number(forms.alertValue),
-        alertUnit: forms.alertUnit,
-        action: forms.ruleType === "AUTO_CONTROL" ? forms.ruleAction : "",
-        cooldownTime: Number(forms.cooldownTime)
-      });
-      updateForm("ruleName", "");
-      await loadHomeScope(homeId);
-    }, "Threshold rule created");
 
   const addUserToHome = () =>
     run(async () => {
